@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJ Availability Checker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f6f6f7; 
+            padding: 40px 20px;
+        }
+        
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        .header {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .title { font-size: 28px; font-weight: 600; margin-bottom: 8px; }
+        .subtitle { font-size: 14px; color: #637381; }
+        
+        .search-section {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .search-btn {
+            width: 100%;
+            padding: 14px;
+            background: #5c6ac4;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .search-btn:hover { background: #4c5ab4; }
+        
+        .results-section {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .results-section.show { display: block; }
+        .results-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e1e3e5;
+        }
+        .count-badge {
+            background: #2ecc71;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 13px;
+            display: inline-block;
+            margin-left: 12px;
+        }
+        
+        .availability-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .dj-item {
+            padding: 16px;
+            border: 1px solid #e1e3e5;
+            border-radius: 6px;
+        }
+        .dj-name a {
+            color: #5c6ac4;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .dj-name a:hover { text-decoration: underline; }
+        
+        .copy-section {
+            background: #f9fafb;
+            border: 2px dashed #c4cdd5;
+            padding: 20px;
+            border-radius: 6px;
+        }
+        .copy-header { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+        .copy-area {
+            background: white;
+            border: 1px solid #c4cdd5;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.8;
+            margin-bottom: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .copy-btn {
+            width: 100%;
+            padding: 12px;
+            background: #5c6ac4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .copy-btn:hover { background: #4c5ab4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">DJ Availability Checker</div>
+            <div class="subtitle">Search for available DJs on a specific date</div>
+        </div>
+        
+        <div class="search-section">
+            <div class="form-group">
+                <label class="form-label">Select Date</label>
+                <input type="date" id="dateInput" class="form-input" />
+            </div>
+            <button class="search-btn" onclick="checkAvailability()">🔍 Check Availability</button>
+        </div>
+        
+        <div class="results-section" id="resultsSection">
+            <div class="results-header">
+                Available DJs
+                <span class="count-badge" id="countBadge">0</span>
+            </div>
+            <div class="availability-list" id="availabilityList"></div>
+            
+            <div class="copy-section">
+                <div class="copy-header">📋 Copy & Paste with Profile Links</div>
+                <div class="copy-area" id="copyArea"></div>
+                <button class="copy-btn" onclick="copyToClipboard()">📋 Copy All</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // All 107 DJs from your Google Sheet - CORRECTED URL
+        const djData = [
+            {name: 'Aaron J', path: '/dj/aaron-j'},
+            {name: 'Aaron R', path: '/dj/aaron-r'},
+            {name: 'Ace R', path: '/dj/ace-r'},
+            {name: 'Adrian A', path: ''},
+            {name: 'Alex G', path: '/dj/alex-g'},
+            {name: 'Andrew C', path: '/dj/andrew-c'},
+            {name: 'Andy R', path: '/dj/andy-r'},
+            {name: 'Angel B', path: '/dj/angel-b'},
+            {name: 'Azure G', path: '/dj/azure-g'},
+            {name: 'Bert', path: ''},
+            {name: 'Brian P', path: '/dj/brian-p'},
+            {name: 'Bryan N', path: '/dj/bryan-n'},
+            {name: 'Cale T', path: '/dj/cale-t'},
+            {name: 'Ceasare O', path: '/dj/ceasare-o'},
+            {name: 'Chondell L', path: '/dj/chondell-l'},
+            {name: 'Chris C', path: '/dj/chris-c'},
+            {name: 'Christian M', path: '/dj/christian-m'},
+            {name: 'Cody N', path: '/dj/cody-n'},
+            {name: 'Conor O', path: '/dj/conor-o'},
+            {name: 'Cullen M', path: '/dj/cullen-m'},
+            {name: 'Daniel C', path: '/dj/daniel-c'},
+            {name: 'Danny D', path: '/dj/danny'},
+            {name: 'Danny L', path: '/dj/danny-l'},
+            {name: 'David H', path: '/dj/david-h'},
+            {name: 'Davis M', path: '/dj/davis-m'},
+            {name: 'Del', path: ''},
+            {name: 'Dominika S', path: '/dj/dominika-s'},
+            {name: 'Dorion W', path: '/dj/dorion-w'},
+            {name: 'Enrique L', path: '/dj/enrique-l'},
+            {name: 'Eric M', path: '/dj/eric-m'},
+            {name: 'Eric V', path: ''},
+            {name: 'Erik C', path: '/dj/erik-c'},
+            {name: 'Ethan M', path: '/dj/ethan-m'},
+            {name: 'Fredy S', path: '/dj/fredy-s'},
+            {name: 'Gabe S', path: '/dj/gabe-s'},
+            {name: 'Gerron C', path: '/dj/gerron-c'},
+            {name: 'Gregory V', path: '/dj/gregory-v'},
+            {name: 'Henry J', path: '/dj/henry-j'},
+            {name: 'Ivan C', path: '/dj/ivan-c'},
+            {name: 'Jake L', path: '/dj/jake-l'},
+            {name: 'Jake W', path: '/dj/jake-w'},
+            {name: 'Jas P', path: '/dj/jas-p'},
+            {name: 'Jason C', path: '/dj/jason-c'},
+            {name: 'Jason F', path: '/dj/jason-f'},
+            {name: 'Jay A', path: '/dj/jay-a'},
+            {name: 'Jay P', path: '/dj/jay-p'},
+            {name: 'Jeff C', path: '/dj/jeff-c'},
+            {name: 'Jenyi L', path: '/dj/jenyi-l'},
+            {name: 'Jericco V', path: '/dj/jericco-v'},
+            {name: 'Joey C', path: '/dj/joey-c'},
+            {name: 'John M', path: '/dj/john-m'},
+            {name: 'Johnny Y', path: '/dj/johnny-y'},
+            {name: 'Jon A', path: '/dj/jon-a'},
+            {name: 'Jordan B', path: '/dj/jordan-b'},
+            {name: 'Jordan T', path: '/dj/jordan-t'},
+            {name: 'Julian C', path: '/dj/julian-c'},
+            {name: 'Julian V', path: '/dj/julian-v'},
+            {name: 'Julien M', path: '/dj/julien-m'},
+            {name: 'Kahai O', path: '/dj/kahai-o'},
+            {name: 'Kai S', path: '/dj/kai-s'},
+            {name: 'Kaleb B', path: '/dj/kaleb-b'},
+            {name: 'Keith J', path: '/dj/keith-j'},
+            {name: 'Kevin L', path: '/dj/kevin-l'},
+            {name: 'Leon L', path: '/dj/leon-l'},
+            {name: 'Luis O', path: '/dj/luis-o'},
+            {name: 'Luke B', path: '/dj/luke-b'},
+            {name: 'Lyn S', path: '/dj/lyn-s'},
+            {name: 'Mac L', path: '/dj/mac-l'},
+            {name: 'Marcos C', path: '/dj/marcos-c'},
+            {name: 'Marina S', path: '/dj/marina-s'},
+            {name: 'Mark R', path: '/dj/mark-r'},
+            {name: 'Mary Jane H', path: '/dj/mary-jane-h'},
+            {name: 'Michael L', path: '/dj/michael-l'},
+            {name: 'Michelle T', path: '/dj/michelle-t'},
+            {name: 'Misha S', path: '/dj/misha-s'},
+            {name: 'Mo B', path: '/dj/mo-b'},
+            {name: 'Nick G', path: '/dj/nick-g'},
+            {name: 'Nick M', path: '/dj/nick-m'},
+            {name: 'Nick Z', path: '/dj/nick-z'},
+            {name: 'Nossi A', path: '/dj/nossi-a'},
+            {name: 'Paola A', path: '/dj/paola-a'},
+            {name: 'Pete P', path: ''},
+            {name: 'Peter P', path: '/dj/peter-p'},
+            {name: 'Rad S', path: '/dj/rad-s'},
+            {name: 'Raphael O', path: '/dj/raphael-o'},
+            {name: 'Reed B', path: '/dj/reed-b'},
+            {name: 'Rob C', path: '/dj/rob-c'},
+            {name: 'Rob G', path: '/dj/rob-g'},
+            {name: 'Robbie F', path: '/dj/robbie-f'},
+            {name: 'Roxy O', path: '/dj/roxy-o'},
+            {name: 'Shanalle C', path: '/dj/shanalle-c'},
+            {name: 'Shy', path: '/dj/shy'},
+            {name: 'Stephen C', path: '/dj/stephen-c'},
+            {name: 'Sujoy H', path: '/dj/sujoy-h'},
+            {name: 'Suki R', path: '/dj/suki-r'},
+            {name: 'Taji H', path: '/dj/taji-h'},
+            {name: 'Tay X', path: '/dj/tay-x'},
+            {name: 'Taylor W', path: '/dj/taylor-w'},
+            {name: 'Tetris K', path: '/dj/tetris-k'},
+            {name: 'Theron S', path: '/dj/theron-s'},
+            {name: 'Tierra O', path: '/dj/tierra-o'},
+            {name: 'Tommy O', path: '/dj/tommy-o'},
+            {name: 'Tyler O', path: '/dj/tyler-o'},
+            {name: 'Vagner P', path: '/dj/vagner-p'},
+            {name: 'Vinny M', path: '/dj/vinny-m'},
+            {name: 'Zach S', path: '/dj/zach-s'},
+            {name: 'Zooz S', path: '/dj/zooz-s'},
+        ];
+
+        const BASE_URL = 'https://www.second-song.com';
+
+        function checkAvailability() {
+            const dateInput = document.getElementById('dateInput').value;
+            if (!dateInput) return;
+            
+            // Filter DJs with valid profile paths
+            const availableDJs = djData.filter(dj => dj.path);
+            
+            displayResults(dateInput, availableDJs);
+        }
+
+        function displayResults(date, availableDJs) {
+            const resultsSection = document.getElementById('resultsSection');
+            const countBadge = document.getElementById('countBadge');
+            const availabilityList = document.getElementById('availabilityList');
+            const copyArea = document.getElementById('copyArea');
+            
+            countBadge.textContent = '✓ ' + availableDJs.length + ' Available';
+            
+            availabilityList.innerHTML = availableDJs.map(dj => `
+                <div class="dj-item">
+                    <div class="dj-name">
+                        <a href="${BASE_URL}${dj.path}" target="_blank">${dj.name}</a>
+                    </div>
+                </div>
+            `).join('');
+            
+            copyArea.innerHTML = availableDJs.map(dj => 
+                `<a href="${BASE_URL}${dj.path}">${dj.name}</a>`
+            ).join('<br>');
+            
+            resultsSection.classList.add('show');
+        }
+
+        function copyToClipboard() {
+            const copyArea = document.getElementById('copyArea');
+            const range = document.createRange();
+            range.selectNode(copyArea);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            
+            const btn = event.target;
+            btn.textContent = '✓ Copied!';
+            btn.style.background = '#2ecc71';
+            setTimeout(() => {
+                btn.textContent = '📋 Copy All';
+                btn.style.background = '#5c6ac4';
+            }, 2000);
+        }
+
+        document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html>
